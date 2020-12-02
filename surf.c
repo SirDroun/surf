@@ -99,6 +99,8 @@ typedef struct {
 	int prio;
 } Parameter;
 
+typedef enum { XDG_CONFIG_HOME, XDG_CACHE_HOME, XDG_DATA_HOME, XDG_RUNTIME_DIR} XdgDir;
+
 typedef struct Client {
 	GtkWidget *win;
 	WebKitWebView *view;
@@ -149,8 +151,8 @@ static void usage(void);
 static void setup(void);
 static void sigchld(int unused);
 static void sighup(int unused);
-static char *buildfile(const char *path);
-static char *buildpath(const char *path);
+static char *buildfile(const char *path, XdgDir xdg);
+static char *buildpath(const char *path, XdgDir xdg);
 static char *untildepath(const char *path);
 static const char *getuserhomedir(const char *user);
 static const char *getcurrentuserhomedir(void);
@@ -257,6 +259,7 @@ static Parameter *curconfig;
 static int modparams[ParameterLast];
 static int spair[2];
 char *argv0;
+char *initial_uri;
 
 static ParamName loadtransient[] = {
 	Certificate,
@@ -301,6 +304,9 @@ static ParamName loadcommitted[] = {
 static ParamName loadfinished[] = {
 	ParameterLast
 };
+
+static char XDG[] = "$XDG_DIR$";  /* constant used for config */
+
 
 /* configuration, allows nested code to access above variables */
 #include "config.h"
@@ -350,14 +356,24 @@ setup(void)
 
 	curconfig = defconfig;
 
+        /* set the application name if not hardcoded */
+        if (NULL == appname) {
+		appname = g_path_get_basename(argv0);
+	}
+
 	/* dirs and files */
-	cookiefile = buildfile(cookiefile);
-	scriptfile = buildfile(scriptfile);
-	certdir    = buildpath(certdir);
+	cookiefile = buildfile(cookiefile, XDG_CACHE_HOME);
+	scriptfile = buildfile(scriptfile, XDG_CONFIG_HOME);
+	certdir    = buildpath(certdir, XDG_DATA_HOME);
+
+	/* re-pack the plugindirs to use datadir */
+	for(i=0; plugindirs[i]; ++i)
+	    plugindirs[i] = buildpath(plugindirs[i], XDG_CONFIG_HOME);
+
 	if (curconfig[Ephemeral].val.i)
 		cachedir = NULL;
 	else
-		cachedir   = buildpath(cachedir);
+		cachedir = buildpath(cachedir, XDG_CACHE_HOME);
 
 	gdkkb = gdk_seat_get_keyboard(gdk_display_get_default_seat(gdpy));
 
@@ -386,7 +402,7 @@ setup(void)
 	}
 
 	if (!stylefile) {
-		styledir = buildpath(styledir);
+		styledir = buildpath(styledir, XDG_CONFIG_HOME);
 		for (i = 0; i < LENGTH(styles); ++i) {
 			if (!regcomp(&(styles[i].re), styles[i].regex,
 			    REG_EXTENDED)) {
@@ -400,7 +416,7 @@ setup(void)
 		}
 		g_free(styledir);
 	} else {
-		stylefile = buildfile(stylefile);
+		stylefile = buildfile(stylefile, XDG_CONFIG_HOME);
 	}
 
 	for (i = 0; i < LENGTH(uriparams); ++i) {
@@ -440,7 +456,7 @@ sighup(int unused)
 }
 
 char *
-buildfile(const char *path)
+buildfile(const char *path, XdgDir xdg)
 {
 	char *dname, *bname, *bpath, *fpath;
 	FILE *f;
@@ -448,7 +464,7 @@ buildfile(const char *path)
 	dname = g_path_get_dirname(path);
 	bname = g_path_get_basename(path);
 
-	bpath = buildpath(dname);
+	bpath = buildpath(dname, xdg);
 	g_free(dname);
 
 	fpath = g_build_filename(bpath, bname, NULL);
@@ -497,15 +513,52 @@ getcurrentuserhomedir(void)
 	return pw->pw_dir;
 }
 
+static const char *
+getenv_with_default(const char* env, const char* def) {
+    char *val;
+
+    val = getenv(env);
+    return (NULL == val) ? def : val;
+}
+
+static const char *
+get_xdg_path(XdgDir xdg) {
+	switch (xdg) {
+	case XDG_CONFIG_HOME:
+		return getenv_with_default("XDG_CONFIG_HOME", "~/.config");
+	case XDG_DATA_HOME:
+		return getenv_with_default("XDG_DATA_HOME", "~/.local/share");
+	case XDG_CACHE_HOME:
+		return getenv_with_default("XDG_CACHE_HOME", "~/.cache");
+	case XDG_RUNTIME_DIR:
+		return getenv_with_default("XDG_RUNTIME_DIR", "/tmp/");
+	default:
+		return "~";
+	}
+}
+
+
 char *
-buildpath(const char *path)
+buildpath(const char *path, XdgDir xdg)
 {
 	char *apath, *fpath;
 
-	if (path[0] == '~')
+	if (g_str_has_prefix(path, "~/"))
 		apath = untildepath(path);
-	else
+	else if (path[0] == '/')
 		apath = g_strdup(path);
+        else if (g_str_has_prefix(path, "./") || g_str_has_prefix(path, "../"))
+		apath = g_strdup(path);
+        else if (datadir == XDG) {
+                const char *dir = get_xdg_path(xdg);
+		char *xdgpath = g_strconcat(dir, "/", appname, "/", path, NULL);
+		apath = untildepath(xdgpath);
+		g_free(xdgpath);
+	} else {
+		char *xdgpath = g_strconcat(datadir, "/", NULL);
+		apath = untildepath(xdgpath);
+		g_free(xdgpath);
+	}
 
 	/* creating directory */
 	if (g_mkdir_with_parents(apath, 0700) < 0)
@@ -1176,9 +1229,9 @@ newview(Client *c, WebKitWebView *rv)
 		    curconfig[DiskCache].val.i ? WEBKIT_CACHE_MODEL_WEB_BROWSER :
 		    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
 		/* plugins directories */
-		for (; *plugindirs; ++plugindirs)
+		for (int i = 0 ; plugindirs[i]; ++i)
 			webkit_web_context_set_additional_plugins_directory(
-			    context, *plugindirs);
+			    context, buildpath(plugindirs[i], XDG_CONFIG_HOME));
 
 		/* Currently only works with text file to be compatible with curl */
 		if (!curconfig[Ephemeral].val.i)
@@ -1254,7 +1307,7 @@ readsock(GIOChannel *s, GIOCondition ioc, gpointer unused)
 		return TRUE;
 	}
 	if (msgsz < 2) {
-		fprintf(stderr, "surf: message too short: %d\n", msgsz);
+		fprintf(stderr, "surf: message too short: %ld\n", msgsz);
 		return TRUE;
 	}
 
@@ -1444,9 +1497,7 @@ createwindow(Client *c)
 	} else {
 		w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-		wmstr = g_path_get_basename(argv0);
-		gtk_window_set_wmclass(GTK_WINDOW(w), wmstr, "Surf");
-		g_free(wmstr);
+		gtk_window_set_wmclass(GTK_WINDOW(w), appname, "Surf");
 
 		wmstr = g_strdup_printf("%s[%"PRIu64"]", "Surf", c->pageid);
 		gtk_window_set_role(GTK_WINDOW(w), wmstr);
@@ -1880,14 +1931,14 @@ msgext(Client *c, char type, const Arg *a)
 	if (spair[0] < 0)
 		return;
 
-	if ((ret = snprintf(msg, sizeof(msg), "%c%c%c", c->pageid, type, a->i))
+	if ((ret = snprintf(msg, sizeof(msg), "%ld%c%c", c->pageid, type, a->i))
 	    >= sizeof(msg)) {
 		fprintf(stderr, "surf: message too long: %d\n", ret);
 		return;
 	}
 
 	if (send(spair[0], msg, ret, 0) != ret)
-		fprintf(stderr, "surf: error sending: %u%c%d (%d)\n",
+		fprintf(stderr, "surf: error sending: %lu%c%d (%d)\n",
 		        c->pageid, type, a->i, ret);
 }
 

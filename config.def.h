@@ -1,13 +1,16 @@
 /* modifier 0 means no modifier */
-static int surfuseragent    = 1;  /* Append Surf version to default WebKit user agent */
-static char *fulluseragent  = ""; /* Or override the whole user agent string */
-static char *scriptfile     = "~/.surf/script.js";
-static char *styledir       = "~/.surf/styles/";
-static char *certdir        = "~/.surf/certificates/";
-static char *cachedir       = "~/.surf/cache/";
-static char *cookiefile     = "~/.surf/cookies.txt";
-static char **plugindirs    = (char*[]){
-	"~/.surf/plugins/",
+static int surfuseragent     = 1;              /* Append Surf version to default WebKit user agent */
+static char *fulluseragent  = "";              /* Or override the whole user agent string */
+static char *datadir        = XDG;             /* XDG, or path */
+static char *appname        = NULL;            /* NULL (i.e default) or string */
+static char *scriptfile     = "script.js";     /* will be prefixed by datadir if not relative or absolute */
+static char *styledir       = "styles/";       /* will be prefixed by datadir if not relative or absolute */
+static char *certdir        = "certificates/"; /* will be prefixed by datadir if not relative or absolute */
+static char *cachedir       = "cache/";        /* will be prefixed by datadir if not relative or absolute */
+static char *cookiefile     = "cookies.txt";   /* will be prefixed by datadir if not relative or absolute */
+static char *plugindirs[]    = {
+        /* entries will be prefixed by datadir if not relative or absolute */
+        "plugins/",
 	LIBPREFIX "/mozilla/plugins/",
 	NULL
 };
