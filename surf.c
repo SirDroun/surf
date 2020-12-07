@@ -224,6 +224,7 @@ static void destroywin(GtkWidget* w, Client *c);
 /* Hotkeys */
 static void pasteuri(GtkClipboard *clipboard, const char *text, gpointer d);
 static void reload(Client *c, const Arg *a);
+static void gohome(Client *c, const Arg *a);
 static void print(Client *c, const Arg *a);
 static void showcert(Client *c, const Arg *a);
 static void clipboard(Client *c, const Arg *a);
@@ -240,6 +241,7 @@ static void find(Client *c, const Arg *a);
 
 /* Buttons */
 static void clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h);
+static void clickclipboard(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h);
 
@@ -1863,6 +1865,16 @@ reload(Client *c, const Arg *a)
 }
 
 void
+gohome(Client *c, const Arg *a)
+{
+        if (homepage) {
+                Arg uri;
+                uri.v = homepage;
+		loaduri((Client *) c, &uri);
+        }
+}
+
+void
 print(Client *c, const Arg *a)
 {
 	webkit_print_operation_run_dialog(webkit_print_operation_new(c->view),
@@ -2031,6 +2043,12 @@ find(Client *c, const Arg *a)
 }
 
 void
+clickclipboard(Client *c, const Arg *a, WebKitHitTestResult *h)
+{
+	clipboard(c, a);
+}
+
+void
 clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h)
 {
 	navigate(c, a);
@@ -2191,10 +2209,17 @@ main(int argc, char *argv[])
 	default:
 		usage();
 	} ARGEND;
-	if (argc > 0)
+	if (argc > 0) {
 		arg.v = argv[0];
-	else
-		arg.v = "about:blank";
+                if (NULL == homepage) {
+                    homepage = argv[0];
+                }
+        } else if (homepage) {
+		arg.v = homepage;
+        } else {
+                homepage = "about:blank";
+		arg.v = homepage;
+        }
 
 	setup();
 	c = newclient(NULL);

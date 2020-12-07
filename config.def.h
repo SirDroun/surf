@@ -143,6 +143,9 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_f,      spawn,      SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
 	{ MODKEY,                GDK_KEY_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
 
+        /* HOME key shortcut */
+	{ 0,                     GDK_KEY_Home,   gohome,    { 0 } },
+
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
 	{ MODKEY,                GDK_KEY_c,      stop,       { 0 } },
 
@@ -203,4 +206,5 @@ static Button buttons[] = {
 	{ OnAny,        0,              8,      clicknavigate,  { .i = -1 },    1 },
 	{ OnAny,        0,              9,      clicknavigate,  { .i = +1 },    1 },
 	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
+	{ OnAny,        0,              2,      clickclipboard,  { .i = 1 },    1 },
 };
