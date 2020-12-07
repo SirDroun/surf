@@ -14,6 +14,7 @@ static char *plugindirs[]    = {
 	LIBPREFIX "/mozilla/plugins/",
 	NULL
 };
+static char *homepage  = NULL; /* use the one given on command line */
 
 /* Webkit default features */
 /* Highest priority value will be used.
