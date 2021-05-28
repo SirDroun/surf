@@ -163,7 +163,8 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_minus,  zoom,       { .i = -1 } },
 	{ MODKEY,                GDK_KEY_plus,   zoom,       { .i = +1 } },
 
-	{ 0,                     GDK_KEY_Insert, clipboard,  { .i = 1 } },
+	{ MODKEY,                GDK_KEY_Insert, clipboarduri,  { .i = 1 } },
+	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_Insert, clipboarduri,  { .i = 0 } },
 	{ MODKEY,                GDK_KEY_p,      clipboard,  { .i = 1 } },
 	{ MODKEY,                GDK_KEY_y,      clipboard,  { .i = 0 } },
 
@@ -193,10 +194,8 @@ static Button buttons[] = {
 	/* target       event mask      button  function        argument        stop event */
 	{ OnLink,       MODKEY,         1,      clicknewwindow, { .i = 1 },     1 },
 	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
-	{ OnDoc,        0,              2,      clickclipboard, { .i = 1 },    1 },
 	{ OnLink,       0,              2,      clicknewwindow, { .i = 0 },     1 },
-	// { OnLink,       MODKEY,         3,      clicknewwindow, { .i = 1 },     1 },
+	{ OnDoc,        0,              2,      clickclipboarduri, { .i = 1 },  1 },
 	{ OnAny,        0,              8,      clicknavigate,  { .i = -1 },    1 },
 	{ OnAny,        0,              9,      clicknavigate,  { .i = +1 },    1 },
-	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
 };

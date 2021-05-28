@@ -226,6 +226,7 @@ static void gohome(Client *c, const Arg *a);
 static void print(Client *c, const Arg *a);
 static void showcert(Client *c, const Arg *a);
 static void clipboard(Client *c, const Arg *a);
+static void clipboarduri(Client *c, const Arg *a);
 static void zoom(Client *c, const Arg *a);
 static void scrollv(Client *c, const Arg *a);
 static void scrollh(Client *c, const Arg *a);
@@ -240,6 +241,7 @@ static void find(Client *c, const Arg *a);
 /* Buttons */
 static void clicknavigate(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clickclipboard(Client *c, const Arg *a, WebKitHitTestResult *h);
+static void clickclipboarduri(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h);
 
@@ -1285,7 +1287,7 @@ readsock(GIOChannel *s, GIOCondition ioc, gpointer unused)
 		return TRUE;
 	}
 	if (msgsz < 2) {
-		fprintf(stderr, "surf: message too short: %d\n", msgsz);
+		fprintf(stderr, "surf: message too short: %ld\n", msgsz);
 		return TRUE;
 	}
 
@@ -1898,6 +1900,20 @@ clipboard(Client *c, const Arg *a)
 }
 
 void
+clipboarduri(Client *c, const Arg *a)
+{
+	if (a->i) { /* load clipboard uri */
+		gtk_clipboard_request_text(gtk_clipboard_get(
+		                           GDK_SELECTION_PRIMARY),
+		                           pasteuri, c);
+	} else { /* copy uri */
+		gtk_clipboard_set_text(gtk_clipboard_get(
+		                       GDK_SELECTION_PRIMARY), c->targeturi
+		                       ? c->targeturi : geturi(c), -1);
+	}
+}
+
+void
 zoom(Client *c, const Arg *a)
 {
 	if (a->i > 0)
@@ -1921,14 +1937,14 @@ msgext(Client *c, char type, const Arg *a)
 	if (spair[0] < 0)
 		return;
 
-	if ((ret = snprintf(msg, sizeof(msg), "%c%c%c", c->pageid, type, a->i))
+	if ((ret = snprintf(msg, sizeof(msg), "%ld%c%c", c->pageid, type, a->i))
 	    >= sizeof(msg)) {
 		fprintf(stderr, "surf: message too long: %d\n", ret);
 		return;
 	}
 
 	if (send(spair[0], msg, ret, 0) != ret)
-		fprintf(stderr, "surf: error sending: %u%c%d (%d)\n",
+		fprintf(stderr, "surf: error sending: %lu%c%d (%d)\n",
 		        c->pageid, type, a->i, ret);
 }
 
@@ -2018,6 +2034,12 @@ find(Client *c, const Arg *a)
 		if (strcmp(s, "") == 0)
 			webkit_find_controller_search_finish(c->finder);
 	}
+}
+
+void
+clickclipboarduri(Client *c, const Arg *a, WebKitHitTestResult *h)
+{
+	clipboarduri(c, a);
 }
 
 void
