@@ -8,12 +8,6 @@ static char *styledir       = "styles/";       /* will be prefixed by datadir if
 static char *certdir        = "certificates/"; /* will be prefixed by datadir if not relative or absolute */
 static char *cachedir       = "cache/";        /* will be prefixed by datadir if not relative or absolute */
 static char *cookiefile     = "cookies.txt";   /* will be prefixed by datadir if not relative or absolute */
-static char *plugindirs[]    = {
-        /* entries will be prefixed by datadir if not relative or absolute */
-        "plugins/",
-	LIBPREFIX "/mozilla/plugins/",
-	NULL
-};
 static char *homepage  = NULL; /* use the one given on command line */
 
 /* Webkit default features */
@@ -24,7 +18,6 @@ static char *homepage  = NULL; /* use the one given on command line */
  */
 static Parameter defconfig[ParameterLast] = {
 	/* parameter                    Arg value       priority */
-	[AcceleratedCanvas]   =       { { .i = 1 },     },
 	[AccessMicrophone]    =       { { .i = 0 },     },
 	[AccessWebcam]        =       { { .i = 0 },     },
 	[Certificate]         =       { { .i = 0 },     },
@@ -45,7 +38,6 @@ static Parameter defconfig[ParameterLast] = {
 	[KioskMode]           =       { { .i = 0 },     },
 	[LoadImages]          =       { { .i = 1 },     },
 	[MediaManualPlay]     =       { { .i = 1 },     },
-	[Plugins]             =       { { .i = 1 },     },
 	[PreferredLanguages]  =       { { .v = (char *[]){ NULL } }, },
 	[RunInFullscreen]     =       { { .i = 0 },     },
 	[ScrollBars]          =       { { .i = 1 },     },
@@ -63,7 +55,6 @@ static Parameter defconfig[ParameterLast] = {
 static UriParameters uriparams[] = {
 	{ "(://|\\.)suckless\\.org(/|$)", {
 	  [JavaScript] = { { .i = 0 }, 1 },
-	  [Plugins]    = { { .i = 0 }, 1 },
 	}, },
 };
 
@@ -191,7 +182,6 @@ static Key keys[] = {
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_g,      toggle,     { .i = Geolocation } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_s,      toggle,     { .i = JavaScript } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_i,      toggle,     { .i = LoadImages } },
-	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_v,      toggle,     { .i = Plugins } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_b,      toggle,     { .i = ScrollBars } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_t,      toggle,     { .i = StrictTLS } },
 	{ MODKEY|GDK_SHIFT_MASK, GDK_KEY_m,      toggle,     { .i = Style } },
@@ -208,4 +198,5 @@ static Button buttons[] = {
 	// { OnLink,       MODKEY,         3,      clicknewwindow, { .i = 1 },     1 },
 	{ OnAny,        0,              8,      clicknavigate,  { .i = -1 },    1 },
 	{ OnAny,        0,              9,      clicknavigate,  { .i = +1 },    1 },
+	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
 };

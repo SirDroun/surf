@@ -51,7 +51,6 @@ enum {
 };
 
 typedef enum {
-	AcceleratedCanvas,
 	AccessMicrophone,
 	AccessWebcam,
 	CaretBrowsing,
@@ -72,7 +71,6 @@ typedef enum {
 	KioskMode,
 	LoadImages,
 	MediaManualPlay,
-	Plugins,
 	PreferredLanguages,
 	RunInFullscreen,
 	ScrollBars,
@@ -246,7 +244,7 @@ static void clicknewwindow(Client *c, const Arg *a, WebKitHitTestResult *h);
 static void clickexternplayer(Client *c, const Arg *a, WebKitHitTestResult *h);
 
 static char winid[64];
-static char togglestats[12];
+static char togglestats[11];
 static char pagestats[2];
 static Atom atoms[AtomLast];
 static Window embed;
@@ -278,7 +276,6 @@ static ParamName loadtransient[] = {
 };
 
 static ParamName loadcommitted[] = {
-	AcceleratedCanvas,
 //	AccessMicrophone,
 //	AccessWebcam,
 	CaretBrowsing,
@@ -291,7 +288,6 @@ static ParamName loadcommitted[] = {
 	Java,
 //	KioskMode,
 	MediaManualPlay,
-	Plugins,
 	RunInFullscreen,
 	ScrollBars,
 	SiteQuirks,
@@ -367,11 +363,6 @@ setup(void)
 	cookiefile = buildfile(cookiefile, XDG_CACHE_HOME);
 	scriptfile = buildfile(scriptfile, XDG_CONFIG_HOME);
 	certdir    = buildpath(certdir, XDG_DATA_HOME);
-
-	/* re-pack the plugindirs to use datadir */
-	for(i=0; plugindirs[i]; ++i)
-	    plugindirs[i] = buildpath(plugindirs[i], XDG_CONFIG_HOME);
-
 	if (curconfig[Ephemeral].val.i)
 		cachedir = NULL;
 	else
@@ -727,12 +718,10 @@ gettogglestats(Client *c)
 	togglestats[3] = curconfig[DiskCache].val.i ?       'D' : 'd';
 	togglestats[4] = curconfig[LoadImages].val.i ?      'I' : 'i';
 	togglestats[5] = curconfig[JavaScript].val.i ?      'S' : 's';
-	togglestats[6] = curconfig[Plugins].val.i ?         'V' : 'v';
-	togglestats[7] = curconfig[Style].val.i ?           'M' : 'm';
-	togglestats[8] = curconfig[FrameFlattening].val.i ? 'F' : 'f';
-	togglestats[9] = curconfig[Certificate].val.i ?     'X' : 'x';
-	togglestats[10] = curconfig[StrictTLS].val.i ?      'T' : 't';
-	togglestats[11] = '\0';
+	togglestats[6] = curconfig[Style].val.i ?           'M' : 'm';
+	togglestats[7] = curconfig[FrameFlattening].val.i ? 'F' : 'f';
+	togglestats[8] = curconfig[Certificate].val.i ?     'X' : 'x';
+	togglestats[9] = curconfig[StrictTLS].val.i ?       'T' : 't';
 }
 
 void
@@ -812,9 +801,6 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 	modparams[p] = curconfig[p].prio;
 
 	switch (p) {
-	case AcceleratedCanvas:
-		webkit_settings_set_enable_accelerated_2d_canvas(s, a->i);
-		break;
 	case AccessMicrophone:
 		return; /* do nothing */
 	case AccessWebcam:
@@ -879,9 +865,6 @@ setparameter(Client *c, int refresh, ParamName p, const Arg *a)
 		break;
 	case MediaManualPlay:
 		webkit_settings_set_media_playback_requires_user_gesture(s, a->i);
-		break;
-	case Plugins:
-		webkit_settings_set_enable_plugins(s, a->i);
 		break;
 	case PreferredLanguages:
 		return; /* do nothing */
@@ -1085,7 +1068,6 @@ newwindow(Client *c, const Arg *a, int noembed)
 	cmd[i++] = curconfig[KioskMode].val.i ?       "-K" : "-k" ;
 	cmd[i++] = curconfig[Style].val.i ?           "-M" : "-m" ;
 	cmd[i++] = curconfig[Inspector].val.i ?       "-N" : "-n" ;
-	cmd[i++] = curconfig[Plugins].val.i ?         "-P" : "-p" ;
 	if (scriptfile && g_strcmp0(scriptfile, "")) {
 		cmd[i++] = "-r";
 		cmd[i++] = scriptfile;
@@ -1185,8 +1167,6 @@ newview(Client *c, WebKitWebView *rv)
 		   "enable-html5-local-storage", curconfig[DiskCache].val.i,
 		   "enable-java", curconfig[Java].val.i,
 		   "enable-javascript", curconfig[JavaScript].val.i,
-		   "enable-plugins", curconfig[Plugins].val.i,
-		   "enable-accelerated-2d-canvas", curconfig[AcceleratedCanvas].val.i,
 		   "enable-site-specific-quirks", curconfig[SiteQuirks].val.i,
 		   "enable-smooth-scrolling", curconfig[SmoothScrolling].val.i,
 		   "enable-webgl", curconfig[WebGL].val.i,
@@ -1230,10 +1210,6 @@ newview(Client *c, WebKitWebView *rv)
 		webkit_web_context_set_cache_model(context,
 		    curconfig[DiskCache].val.i ? WEBKIT_CACHE_MODEL_WEB_BROWSER :
 		    WEBKIT_CACHE_MODEL_DOCUMENT_VIEWER);
-		/* plugins directories */
-		for (int i = 0 ; plugindirs[i]; ++i)
-			webkit_web_context_set_additional_plugins_directory(
-			    context, buildpath(plugindirs[i], XDG_CONFIG_HOME));
 
 		/* Currently only works with text file to be compatible with curl */
 		if (!curconfig[Ephemeral].val.i)
@@ -1309,7 +1285,7 @@ readsock(GIOChannel *s, GIOCondition ioc, gpointer unused)
 		return TRUE;
 	}
 	if (msgsz < 2) {
-		fprintf(stderr, "surf: message too short: %ld\n", msgsz);
+		fprintf(stderr, "surf: message too short: %d\n", msgsz);
 		return TRUE;
 	}
 
@@ -1499,7 +1475,9 @@ createwindow(Client *c)
 	} else {
 		w = gtk_window_new(GTK_WINDOW_TOPLEVEL);
 
-		gtk_window_set_wmclass(GTK_WINDOW(w), appname, "Surf");
+		wmstr = g_path_get_basename(argv0);
+		gtk_window_set_wmclass(GTK_WINDOW(w), wmstr, "Surf");
+		g_free(wmstr);
 
 		wmstr = g_strdup_printf("%s[%"PRIu64"]", "Surf", c->pageid);
 		gtk_window_set_role(GTK_WINDOW(w), wmstr);
@@ -1943,14 +1921,14 @@ msgext(Client *c, char type, const Arg *a)
 	if (spair[0] < 0)
 		return;
 
-	if ((ret = snprintf(msg, sizeof(msg), "%ld%c%c", c->pageid, type, a->i))
+	if ((ret = snprintf(msg, sizeof(msg), "%c%c%c", c->pageid, type, a->i))
 	    >= sizeof(msg)) {
 		fprintf(stderr, "surf: message too long: %d\n", ret);
 		return;
 	}
 
 	if (send(spair[0], msg, ret, 0) != ret)
-		fprintf(stderr, "surf: error sending: %lu%c%d (%d)\n",
+		fprintf(stderr, "surf: error sending: %u%c%d (%d)\n",
 		        c->pageid, type, a->i, ret);
 }
 
@@ -2158,14 +2136,6 @@ main(int argc, char *argv[])
 	case 'N':
 		defconfig[Inspector].val.i = 1;
 		defconfig[Inspector].prio = 2;
-		break;
-	case 'p':
-		defconfig[Plugins].val.i = 0;
-		defconfig[Plugins].prio = 2;
-		break;
-	case 'P':
-		defconfig[Plugins].val.i = 1;
-		defconfig[Plugins].prio = 2;
 		break;
 	case 'r':
 		scriptfile = EARGF(usage());
