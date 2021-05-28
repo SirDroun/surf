@@ -145,7 +145,7 @@ static Key keys[] = {
 	{ MODKEY,                GDK_KEY_slash,  spawn,      SETPROP("_SURF_FIND", "_SURF_FIND", PROMPT_FIND) },
 
         /* HOME key shortcut */
-	{ 0,                     GDK_KEY_Home,   gohome,    { 0 } },
+	{ MODKEY,                GDK_KEY_Home,   gohome,    { 0 } },
 
 	{ 0,                     GDK_KEY_Escape, stop,       { 0 } },
 	{ MODKEY,                GDK_KEY_c,      stop,       { 0 } },
@@ -201,11 +201,11 @@ static Key keys[] = {
 /* target can be OnDoc, OnLink, OnImg, OnMedia, OnEdit, OnBar, OnSel, OnAny */
 static Button buttons[] = {
 	/* target       event mask      button  function        argument        stop event */
-	{ OnLink,       0,              2,      clicknewwindow, { .i = 0 },     1 },
-	{ OnLink,       MODKEY,         2,      clicknewwindow, { .i = 1 },     1 },
 	{ OnLink,       MODKEY,         1,      clicknewwindow, { .i = 1 },     1 },
+	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
+	{ OnDoc,        0,              2,      clickclipboard, { .i = 1 },    1 },
+	{ OnLink,       0,              2,      clicknewwindow, { .i = 0 },     1 },
+	// { OnLink,       MODKEY,         3,      clicknewwindow, { .i = 1 },     1 },
 	{ OnAny,        0,              8,      clicknavigate,  { .i = -1 },    1 },
 	{ OnAny,        0,              9,      clicknavigate,  { .i = +1 },    1 },
-	{ OnMedia,      MODKEY,         1,      clickexternplayer, { 0 },       1 },
-	{ OnAny,        0,              2,      clickclipboard,  { .i = 1 },    1 },
 };
