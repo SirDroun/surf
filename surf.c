@@ -1028,7 +1028,7 @@ evalscript(Client *c, const char *jsstr, ...)
 void
 updatewinid(Client *c)
 {
-	snprintf(winid, LENGTH(winid), "%lu", c->xid);
+	snprintf(winid, LENGTH(winid), "%ld", c->xid);
 }
 
 void
@@ -1937,14 +1937,14 @@ msgext(Client *c, char type, const Arg *a)
 	if (spair[0] < 0)
 		return;
 
-	if ((ret = snprintf(msg, sizeof(msg), "%ld%c%c", c->pageid, type, a->i))
+	if ((ret = snprintf(msg, sizeof(msg), "%lu%c%c", c->pageid, type, a->i))
 	    >= sizeof(msg)) {
 		fprintf(stderr, "surf: message too long: %d\n", ret);
 		return;
 	}
 
 	if (send(spair[0], msg, ret, 0) != ret)
-		fprintf(stderr, "surf: error sending: %lu%c%d (%d)\n",
+		fprintf(stderr, "surf: error sending: %lu%d%d (%d)\n",
 		        c->pageid, type, a->i, ret);
 }
 

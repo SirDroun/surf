@@ -20,7 +20,7 @@ options:
 	@echo "LDFLAGS       = $(LDFLAGS)"
 
 surf: $(OBJ)
-	$(CC) $(SURFLDFLAGS) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+	$(CC) -g $(SURFLDFLAGS) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
 
 $(OBJ) $(WOBJ): config.h common.h config.mk
 
@@ -28,13 +28,13 @@ config.h:
 	cp config.def.h $@
 
 $(OBJ): $(SRC)
-	$(CC) $(SURFCFLAGS) $(CFLAGS) -c $(SRC)
+	$(CC) -g $(SURFCFLAGS) $(CFLAGS) -c $(SRC)
 
 $(WLIB): $(WOBJ)
-	$(CC) -shared -Wl,-soname,$@ $(LDFLAGS) -o $@ $? $(WEBEXTLIBS)
+	$(CC) -g -shared -Wl,-soname,$@ $(LDFLAGS) -o $@ $? $(WEBEXTLIBS)
 
 $(WOBJ): $(WSRC)
-	$(CC) $(WEBEXTCFLAGS) $(CFLAGS) -c $(WSRC)
+	$(CC) -g $(WEBEXTCFLAGS) $(CFLAGS) -c $(WSRC)
 
 clean:
 	rm -f surf $(OBJ)

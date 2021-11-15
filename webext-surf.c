@@ -25,7 +25,7 @@ msgsurf(guint64 pageid, const char *s)
 	size_t sln = strlen(s);
 	int ret;
 
-	if ((ret = snprintf(msg, sizeof(msg), "%c%s", pageid, s))
+	if ((ret = snprintf(msg, sizeof(msg), "%ld%s", pageid, s))
 	    >= sizeof(msg)) {
 		fprintf(stderr, "webext: msg: message too long: %d\n", ret);
 		return;
@@ -55,7 +55,7 @@ readsock(GIOChannel *s, GIOCondition c, gpointer unused)
 	}
 
 	if (msgsz < 2) {
-		fprintf(stderr, "webext: readsock: message too short: %d\n",
+		fprintf(stderr, "webext: readsock: message too short: %ld\n",
 		        msgsz);
 		return TRUE;
 	}
@@ -72,7 +72,7 @@ readsock(GIOChannel *s, GIOCondition c, gpointer unused)
 		snprintf(js, sizeof(js),
 		         "window.scrollBy(window.innerWidth/100*%d,0);",
 		         msg[2]);
-		jsc_context_evaluate(jsc, js, -1);
+		(void)(!jsc_context_evaluate(jsc, js, -1));
 		break;
 	case 'v':
 		if (msgsz != 3)
@@ -80,7 +80,7 @@ readsock(GIOChannel *s, GIOCondition c, gpointer unused)
 		snprintf(js, sizeof(js),
 		         "window.scrollBy(0,window.innerHeight/100*%d);",
 		         msg[2]);
-		jsc_context_evaluate(jsc, js, -1);
+		(void)(!jsc_context_evaluate(jsc, js, -1));
 		break;
 	}
 
@@ -89,13 +89,13 @@ readsock(GIOChannel *s, GIOCondition c, gpointer unused)
 
 G_MODULE_EXPORT void
 webkit_web_extension_initialize_with_user_data(WebKitWebExtension *e,
-                                               const GVariant *gv)
+                                               GVariant *gv)
 {
 	GIOChannel *gchansock;
 
 	webext = e;
 
-	g_variant_get(gv, "i", &sock);
+	g_variant_get((struct _GVariant *)gv, "i", &sock);
 
 	gchansock = g_io_channel_unix_new(sock);
 	g_io_channel_set_encoding(gchansock, NULL, NULL);
