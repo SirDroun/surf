@@ -152,8 +152,8 @@ static void usage(void);
 static void setup(void);
 static void sigchld(int unused);
 static void sighup(int unused);
-static char *buildfile(const char *path, XdgDir xdg);
-static char *buildpath(const char *path, XdgDir xdg);
+static char *buildfile(const char *path, const char *fallback, XdgDir xdg);
+static char *buildpath(const char *path, const char *fallback, XdgDir xdg);
 static char *untildepath(const char *path);
 static const char *getuserhomedir(const char *user);
 static const char *getcurrentuserhomedir(void);
@@ -368,13 +368,10 @@ setup(void)
 	}
 
 	/* dirs and files */
-	cookiefile = buildfile(cookiefile, XDG_CACHE_HOME);
-	scriptfile = buildfile(scriptfile, XDG_CONFIG_HOME);
-	certdir    = buildpath(certdir, XDG_DATA_HOME);
-	if (curconfig[Ephemeral].val.i)
-		cachedir = NULL;
-	else
-		cachedir = buildpath(cachedir, XDG_CACHE_HOME);
+	cookiefile = buildfile(cookiefile, cachedir, XDG_CACHE_HOME);
+	scriptfile = buildfile(scriptfile, datadir, XDG_CONFIG_HOME);
+	certdir    = buildpath(certdir, datadir, XDG_DATA_HOME);
+        cache = buildpath(cache, cachedir, XDG_CACHE_HOME);
 
 	gdkkb = gdk_seat_get_keyboard(gdk_display_get_default_seat(gdpy));
 
@@ -403,7 +400,7 @@ setup(void)
 	}
 
 	if (!stylefile) {
-		styledir = buildpath(styledir, XDG_CONFIG_HOME);
+		styledir = buildpath(styledir, datadir, XDG_CONFIG_HOME);
 		for (i = 0; i < LENGTH(styles); ++i) {
 			if (!regcomp(&(styles[i].re), styles[i].regex,
 			    REG_EXTENDED)) {
@@ -417,7 +414,7 @@ setup(void)
 		}
 		g_free(styledir);
 	} else {
-		stylefile = buildfile(stylefile, XDG_CONFIG_HOME);
+		stylefile = buildfile(stylefile, datadir, XDG_CONFIG_HOME);
 	}
 
 	for (i = 0; i < LENGTH(uriparams); ++i) {
@@ -457,7 +454,7 @@ sighup(int unused)
 }
 
 char *
-buildfile(const char *path, XdgDir xdg)
+buildfile(const char *path, const char *fallback, XdgDir xdg)
 {
 	char *dname, *bname, *bpath, *fpath;
 	FILE *f;
@@ -465,7 +462,7 @@ buildfile(const char *path, XdgDir xdg)
 	dname = g_path_get_dirname(path);
 	bname = g_path_get_basename(path);
 
-	bpath = buildpath(dname, xdg);
+	bpath = buildpath(dname, fallback, xdg);
 	g_free(dname);
 
 	fpath = g_build_filename(bpath, bname, NULL);
@@ -540,7 +537,7 @@ get_xdg_path(XdgDir xdg) {
 
 
 char *
-buildpath(const char *path, XdgDir xdg)
+buildpath(const char *path, const char *fallback, XdgDir xdg)
 {
 	char *apath, *fpath;
 
@@ -550,15 +547,17 @@ buildpath(const char *path, XdgDir xdg)
 		apath = g_strdup(path);
         else if (g_str_has_prefix(path, "./") || g_str_has_prefix(path, "../"))
 		apath = g_strdup(path);
-        else if (datadir == XDG) {
+        else if (fallback == XDG) {
                 const char *dir = get_xdg_path(xdg);
 		char *xdgpath = g_strconcat(dir, "/", appname, "/", path, NULL);
 		apath = untildepath(xdgpath);
 		g_free(xdgpath);
-	} else {
-		char *xdgpath = g_strconcat(datadir, "/", NULL);
-		apath = untildepath(xdgpath);
-		g_free(xdgpath);
+	} else if (g_str_has_prefix(fallback, "~/")) {
+		char *dpath = g_strconcat(fallback, "/", path, NULL);
+                apath = untildepath(dpath);
+                g_free(dpath);
+        } else {
+		apath = g_strconcat(fallback, "/", path, NULL);
 	}
 
 	/* creating directory */
@@ -1083,6 +1082,14 @@ newwindow(Client *c, const Arg *a, int noembed)
 		cmd[i++] = "-r";
 		cmd[i++] = scriptfile;
 	}
+        if (datadir != XDG) {
+            cmd[i++] = "-h";
+            cmd[i++] = datadir;
+        }
+        if (cachedir != XDG) {
+            cmd[i++] = "-H";
+            cmd[i++] = cachedir;
+        }
 	cmd[i++] = curconfig[JavaScript].val.i ? "-S" : "-s";
 	cmd[i++] = curconfig[StrictTLS].val.i ? "-T" : "-t";
 	if (fulluseragent && g_strcmp0(fulluseragent, "")) {
@@ -1147,7 +1154,7 @@ cleanup(void)
 	g_free(cookiefile);
 	g_free(scriptfile);
 	g_free(stylefile);
-	g_free(cachedir);
+	g_free(cache);
 	XCloseDisplay(dpy);
 }
 
@@ -1201,8 +1208,8 @@ newview(Client *c, WebKitWebView *rv)
 		} else {
 			context = webkit_web_context_new_with_website_data_manager(
 			          webkit_website_data_manager_new(
-			          "base-cache-directory", cachedir,
-			          "base-data-directory", cachedir,
+			          "base-cache-directory", (curconfig[Ephemeral].val.i) ? NULL : cache,
+			          "base-data-directory", (curconfig[Ephemeral].val.i) ? NULL : cache,
 			          NULL));
 		}
 
@@ -2157,6 +2164,12 @@ main(int argc, char *argv[])
 		defconfig[Geolocation].val.i = 1;
 		defconfig[Geolocation].prio = 2;
 		break;
+        case 'h':
+                datadir = EARGF(usage());
+                break;
+        case 'H':
+                cachedir = EARGF(usage());
+                break;
 	case 'i':
 		defconfig[LoadImages].val.i = 0;
 		defconfig[LoadImages].prio = 2;

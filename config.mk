@@ -5,7 +5,7 @@ VERSION = 2.1
 
 DESTDIR=${HOME}/.local
 # paths
-PREFIX = /usr/local
+PREFIX = 
 MANPREFIX = $(PREFIX)/share/man
 LIBPREFIX = $(PREFIX)/lib
 LIBDIR = $(LIBPREFIX)/surf
